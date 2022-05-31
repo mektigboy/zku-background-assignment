@@ -25,13 +25,11 @@ contract SafeRemotePurchase {
             revert OnlyBuyer();
         _;
     }
-
     modifier onlySeller() {
         if (msg.sender != seller)
             revert OnlySeller();
         _;
     }
-
     modifier inState(State _state) {
         if (state != _state)
             revert InvalidState();
@@ -40,8 +38,9 @@ contract SafeRemotePurchase {
 
     event Aborted();
     event PurchaseConfirmed();
-    event ItemReceived();
-    event SellerRefunded();
+    // event ItemReceived();
+    // event SellerRefunded();
+    event PurchaseCompleted();
 
     constructor() payable {
         seller = payable(msg.sender);
@@ -57,27 +56,32 @@ contract SafeRemotePurchase {
 
         seller.transfer(address(this).balance);
     }
-
     function confirmPurchase() external inState(State.Created) condition(msg.value == (2 * value)) payable {
         emit PurchaseConfirmed();
 
         buyer = payable(msg.sender);
         state = State.Locked;
     }
+    // function confirmReceived() external onlyBuyer inState(State.Locked) {
+    //     emit ItemReceived();
 
-    function confirmReceived() external onlyBuyer inState(State.Locked) {
-        emit ItemReceived();
+    //     state = State.Release;
 
-        state = State.Release;
+    //     buyer.transfer(value);
+    // }
+    // function refundSeller() external onlySeller inState(State.Release) {
+    //     emit SellerRefunded();
 
-        buyer.transfer(value);
-    }
+    //     state = State.Inactive;
 
-    function refundSeller() external onlySeller inState(State.Release) {
-        emit SellerRefunded();
+    //     seller.transfer(3 * value);
+    // }
+    function completePurchase() external onlyBuyer inState(State.Locked) {
+        emit PurchaseCompleted();
 
         state = State.Inactive;
 
+        buyer.transfer(value);
         seller.transfer(3 * value);
     }
 }
