@@ -4,6 +4,7 @@ pragma solidity ^0.8.14;
 contract SafeRemotePurchase {
     uint public value;
     uint public releaseTime;
+    uint public deploymentTime;
     address payable public seller;
     address payable public buyer;
 
@@ -46,6 +47,7 @@ contract SafeRemotePurchase {
     constructor() payable {
         seller = payable(msg.sender);
         value = msg.value / 2;
+        deploymentTime = block.timestamp;
 
         if ((2 * value) != msg.value)
             revert ValueNotEven();
