@@ -3,10 +3,11 @@ pragma solidity ^0.8.14;
 
 contract SafeRemotePurchase {
     uint public value;
+    uint public releaseTime;
     address payable public seller;
     address payable public buyer;
 
-    enum State { Created, Locked, Release, Inactive }
+    enum State { Created, Locked, Inactive }
 
     State public state;
 
@@ -15,16 +16,16 @@ contract SafeRemotePurchase {
         _;
     }
 
-    error OnlyBuyer();
+    // error OnlyBuyer();
     error OnlySeller();
     error InvalidState();
     error ValueNotEven();
 
-    modifier onlyBuyer() {
-        if (msg.sender != buyer)
-            revert OnlyBuyer();
-        _;
-    }
+    // modifier onlyBuyer() {
+    //     if (msg.sender != buyer)
+    //         revert OnlyBuyer();
+    //     _;
+    // }
     modifier onlySeller() {
         if (msg.sender != seller)
             revert OnlySeller();
@@ -38,13 +39,14 @@ contract SafeRemotePurchase {
 
     event Aborted();
     event PurchaseConfirmed();
-    // event ItemReceived();
-    // event SellerRefunded();
+    event ItemReceived();
+    event SellerRefunded();
     event PurchaseCompleted();
 
     constructor() payable {
         seller = payable(msg.sender);
         value = msg.value / 2;
+
         if ((2 * value) != msg.value)
             revert ValueNotEven();
     }
@@ -59,6 +61,7 @@ contract SafeRemotePurchase {
     function confirmPurchase() external inState(State.Created) condition(msg.value == (2 * value)) payable {
         emit PurchaseConfirmed();
 
+        releaseTime = block.timestamp;
         buyer = payable(msg.sender);
         state = State.Locked;
     }
@@ -76,7 +79,9 @@ contract SafeRemotePurchase {
 
     //     seller.transfer(3 * value);
     // }
-    function completePurchase() external onlyBuyer inState(State.Locked) {
+    function completePurchase() external inState(State.Locked) condition(msg.sender == buyer || block.timestamp > (releaseTime + 300))  {
+        emit ItemReceived();
+        emit SellerRefunded();
         emit PurchaseCompleted();
 
         state = State.Inactive;
